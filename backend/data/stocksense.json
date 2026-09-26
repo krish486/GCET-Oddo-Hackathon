@@ -1,0 +1,213 @@
+{
+  "users": [
+    {
+      "id": "usr_demo_manager",
+      "name": "Demo Manager",
+      "email": "manager@stocksense.app",
+      "passwordHash": "b5b33dff135c0963daa2d24970e6e9db:b3a2c6d0b9a0fcdf1cb682dae927f2379242b3839437a4d4675b97c1040d4cd283657841d5c324352796097d56b86eb0adced3458a3691eb713e2e531b0c4c80",
+      "role": "manager",
+      "createdAt": "2026-09-26T06:00:06.418Z",
+      "updatedAt": "2026-09-26T06:00:06.418Z"
+    },
+    {
+      "id": "usr_b177375a381d",
+      "name": "krishna",
+      "email": "abc@gmail.com",
+      "passwordHash": "5e7c0700379c1381453a9b3369b90fbf:8a50c23dd2a75ba6c044a615b7195faea0defd0b1a4e177ada6c070521d5b3a4fe0b677f3497ee5037b22fb9b95531ab8cdb586269a8e1cb79d897f7d224d4c2",
+      "role": "staff",
+      "createdAt": "2026-09-26T06:00:06.490Z",
+      "updatedAt": "2026-09-26T06:00:06.490Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": "cat_metals",
+      "name": "Raw Materials",
+      "description": "Raw material inventory",
+      "createdAt": "2026-09-26T06:00:06.418Z"
+    }
+  ],
+  "warehouses": [
+    {
+      "id": "wh_main",
+      "name": "Main Warehouse",
+      "code": "MAIN",
+      "address": "StockSense Demo Facility",
+      "createdAt": "2026-09-26T06:00:06.418Z"
+    }
+  ],
+  "locations": [
+    {
+      "id": "loc_main_store",
+      "warehouseId": "wh_main",
+      "name": "Main Store",
+      "code": "MAIN-ST",
+      "parentId": null,
+      "createdAt": "2026-09-26T06:00:06.418Z"
+    },
+    {
+      "id": "loc_production_rack",
+      "warehouseId": "wh_main",
+      "name": "Production Rack",
+      "code": "PROD-R1",
+      "parentId": null,
+      "createdAt": "2026-09-26T06:00:06.418Z"
+    }
+  ],
+  "products": [
+    {
+      "id": "prd_steel",
+      "name": "Steel",
+      "sku": "STL-001",
+      "categoryId": "cat_metals",
+      "unit": "kg",
+      "reorderLevel": 25,
+      "description": "Demo stock for the end-to-end workflow",
+      "active": true,
+      "createdAt": "2026-09-26T06:00:06.418Z",
+      "updatedAt": "2026-09-26T06:00:06.418Z"
+    }
+  ],
+  "stocks": [
+    {
+      "id": "stk_steel_main",
+      "productId": "prd_steel",
+      "locationId": "loc_main_store",
+      "quantity": 124,
+      "updatedAt": "2026-09-26T06:26:17.397Z"
+    },
+    {
+      "id": "stk_steel_rack",
+      "productId": "prd_steel",
+      "locationId": "loc_production_rack",
+      "quantity": 20,
+      "updatedAt": "2026-09-26T06:00:06.418Z"
+    }
+  ],
+  "operations": [
+    {
+      "id": "op_9fa79f8a7274",
+      "type": "receipt",
+      "number": "REC-0001",
+      "status": "done",
+      "supplier": "abc",
+      "customer": "",
+      "sourceLocationId": null,
+      "destinationLocationId": "loc_main_store",
+      "locationId": null,
+      "note": "null",
+      "lines": [
+        {
+          "productId": "prd_steel",
+          "quantity": 12
+        },
+        {
+          "productId": "prd_steel",
+          "quantity": 12
+        }
+      ],
+      "createdBy": "usr_demo_manager",
+      "createdAt": "2026-09-26T06:26:14.745Z",
+      "updatedAt": "2026-09-26T06:26:17.397Z",
+      "validatedAt": "2026-09-26T06:26:17.397Z",
+      "validatedBy": "usr_demo_manager"
+    },
+    {
+      "id": "op_fa20e0676093",
+      "type": "receipt",
+      "number": "REC-0002",
+      "status": "draft",
+      "supplier": "adsad",
+      "customer": "",
+      "sourceLocationId": null,
+      "destinationLocationId": "loc_production_rack",
+      "locationId": null,
+      "note": "adwd",
+      "lines": [
+        {
+          "productId": "prd_steel",
+          "quantity": 22
+        }
+      ],
+      "createdBy": "usr_demo_manager",
+      "createdAt": "2026-09-26T06:26:40.730Z",
+      "updatedAt": "2026-09-26T06:26:40.730Z"
+    }
+  ],
+  "ledger": [
+    {
+      "id": "led_seed_receipt",
+      "productId": "prd_steel",
+      "locationId": "loc_main_store",
+      "quantityChange": 100,
+      "balanceAfter": 100,
+      "operationType": "initial",
+      "documentId": "seed",
+      "documentNumber": "SEED-001",
+      "note": "Seeded opening balance",
+      "createdAt": "2026-09-26T06:00:06.418Z"
+    },
+    {
+      "id": "led_seed_transfer_out",
+      "productId": "prd_steel",
+      "locationId": "loc_main_store",
+      "quantityChange": -20,
+      "balanceAfter": 80,
+      "operationType": "transfer",
+      "documentId": "seed",
+      "documentNumber": "SEED-002",
+      "note": "Seeded production allocation",
+      "createdAt": "2026-09-26T06:00:06.418Z"
+    },
+    {
+      "id": "led_seed_transfer_in",
+      "productId": "prd_steel",
+      "locationId": "loc_production_rack",
+      "quantityChange": 20,
+      "balanceAfter": 20,
+      "operationType": "transfer",
+      "documentId": "seed",
+      "documentNumber": "SEED-002",
+      "note": "Seeded production allocation",
+      "createdAt": "2026-09-26T06:00:06.418Z"
+    },
+    {
+      "id": "led_a61ffc4b2417",
+      "productId": "prd_steel",
+      "locationId": "loc_main_store",
+      "quantityChange": 12,
+      "balanceAfter": 112,
+      "operationType": "receipt",
+      "documentId": "op_9fa79f8a7274",
+      "documentNumber": "REC-0001",
+      "note": "Receipt from abc",
+      "userId": "usr_demo_manager",
+      "createdAt": "2026-09-26T06:26:17.397Z"
+    },
+    {
+      "id": "led_3e0f900a60b5",
+      "productId": "prd_steel",
+      "locationId": "loc_main_store",
+      "quantityChange": 12,
+      "balanceAfter": 124,
+      "operationType": "receipt",
+      "documentId": "op_9fa79f8a7274",
+      "documentNumber": "REC-0001",
+      "note": "Receipt from abc",
+      "userId": "usr_demo_manager",
+      "createdAt": "2026-09-26T06:26:17.397Z"
+    }
+  ],
+  "passwordResets": [],
+  "revokedTokens": [
+    {
+      "jti": "c700181b-cf46-4d8b-bc39-f2d2119a6e01",
+      "expiresAt": 1790431206
+    },
+    {
+      "jti": "70535eaf-9093-4c34-9418-8bc7a92149a9",
+      "expiresAt": 1790432649
+    }
+  ],
+  "createdAt": "2026-09-26T06:00:06.418Z"
+}

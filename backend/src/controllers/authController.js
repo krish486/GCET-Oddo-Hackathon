@@ -1,0 +1,12 @@
+const auth = require('../services/authService');
+const { validate } = require('../validators');
+const execute = (work) => async (ctx) => work(ctx);
+const signup = execute(({ body }) => { validate('signup', body); return { data: auth.signup(body), message: 'Account created.', status: 201 }; });
+const login = execute(({ body }) => { validate('login', body); return { data: auth.login(body), message: 'Signed in successfully.' }; });
+const logout = execute(({ token }) => { auth.logout(token); return { data: null, message: 'Signed out successfully.' }; });
+const forgotPassword = execute(({ body }) => { validate('forgotPassword', body); return { data: auth.startPasswordReset(body), message: 'If that email exists, a verification code has been sent.' }; });
+const verifyOtp = execute(({ body }) => { validate('verifyOtp', body); return { data: auth.verifyOtp(body), message: 'Code verified.' }; });
+const resetPassword = execute(({ body }) => { validate('resetPassword', body); return { data: auth.resetPassword(body), message: 'Password reset successfully.' }; });
+const me = execute(({ user }) => ({ data: user }));
+const updateProfile = execute(({ user, body }) => ({ data: auth.updateProfile(user.id, body), message: 'Profile updated.' }));
+module.exports = { signup, login, logout, forgotPassword, verifyOtp, resetPassword, me, updateProfile };

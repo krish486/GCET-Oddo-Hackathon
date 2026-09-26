@@ -1,0 +1,20 @@
+const store = require('../models/store');
+const inventory = require('./inventoryService');
+const { fail } = require('../utils/http');
+
+function categoryList() { return store.read().categories; }
+function createCategory({ name, description = '' }) { if (!String(name || '').trim()) fail(422, 'INVALID_CATEGORY', 'Category name is required.'); return store.transaction((state) => { if (state.categories.some((c) => c.name.toLowerCase() === name.trim().toLowerCase())) fail(409, 'DUPLICATE_CATEGORY', 'A category with that name already exists.'); const category = { id: store.id('cat'), name: name.trim(), description: String(description), createdAt: new Date().toISOString() }; state.categories.push(category); return category; }); }
+function enrichProduct(state, product) { const availability = inventory.availability(state, product.id); return { ...product, category: state.categories.find((c) => c.id === product.categoryId) || null, totalOnHand: availability.reduce((sum, item) => sum + item.quantity, 0), availability }; }
+function listProducts(query = {}) { const state = store.read(); const search = String(query.search || '').toLowerCase(); return state.products.filter((product) => (!query.categoryId || product.categoryId === query.categoryId) && (!search || [product.name, product.sku].some((value) => value.toLowerCase().includes(search)))).map((product) => enrichProduct(state, product)); }
+function getProduct(id) { const state = store.read(); const product = state.products.find((item) => item.id === id); if (!product) fail(404, 'NOT_FOUND', 'Product was not found.'); return enrichProduct(state, product); }
+function validateProduct(input, state, existingId) {
+  if (!String(input.name || '').trim()) fail(422, 'INVALID_PRODUCT', 'Product name is required.');
+  if (!String(input.sku || '').trim()) fail(422, 'INVALID_SKU', 'SKU is required.');
+  if (!String(input.unit || '').trim()) fail(422, 'INVALID_UNIT', 'Unit of measure is required.');
+  if (!state.categories.some((category) => category.id === input.categoryId)) fail(422, 'INVALID_CATEGORY', 'Select a valid category.');
+  if (state.products.some((product) => product.sku.toLowerCase() === input.sku.trim().toLowerCase() && product.id !== existingId)) fail(409, 'DUPLICATE_SKU', 'SKU must be unique.');
+  const reorderLevel = Number(input.reorderLevel || 0); if (!Number.isFinite(reorderLevel) || reorderLevel < 0) fail(422, 'INVALID_REORDER_LEVEL', 'Reorder level must be zero or greater.'); return reorderLevel;
+}
+function createProduct(input, userId) { return store.transaction((state) => { const reorderLevel = validateProduct(input, state); const timestamp = new Date().toISOString(); const product = { id: store.id('prd'), name: input.name.trim(), sku: input.sku.trim(), categoryId: input.categoryId, unit: input.unit.trim(), reorderLevel, description: String(input.description || ''), active: true, createdAt: timestamp, updatedAt: timestamp }; state.products.push(product); const opening = Number(input.initialQuantity || 0); if (opening > 0) { if (!input.initialLocationId) fail(422, 'INITIAL_LOCATION_REQUIRED', 'Choose an opening-stock location.'); inventory.applyMovement(state, { productId: product.id, locationId: input.initialLocationId, delta: opening, operationType: 'initial', documentId: product.id, documentNumber: `OPEN-${product.sku}`, note: 'Opening stock', userId }); } return enrichProduct(state, product); }); }
+function updateProduct(id, input) { return store.transaction((state) => { const product = state.products.find((item) => item.id === id); if (!product) fail(404, 'NOT_FOUND', 'Product was not found.'); const merged = { ...product, ...input }; const reorderLevel = validateProduct(merged, state, id); Object.assign(product, { name: merged.name.trim(), sku: merged.sku.trim(), categoryId: merged.categoryId, unit: merged.unit.trim(), reorderLevel, description: String(merged.description || ''), active: merged.active !== false, updatedAt: new Date().toISOString() }); return enrichProduct(state, product); }); }
+module.exports = { categoryList, createCategory, listProducts, getProduct, createProduct, updateProduct };
