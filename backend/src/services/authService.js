@@ -1,7 +1,15 @@
 const store = require('../models/store');
 const { fail } = require('../utils/http');
-const { hashPassword, verifyPassword, issueToken, readToken, otp, hashValue } = require('../utils/security');
+const {
+    hashPassword,
+    verifyPassword,
+    issueToken,
+    readToken,
+    otp,
+    hashValue,
+} = require('../utils/security');
 const { ROLES } = require('../constants');
+const { sendPasswordResetOtp } = require('../utils/mailer');
 
 const emailOf = (email) => String(email || '').trim().toLowerCase();
 const publicUser = ({ passwordHash, ...user }) => user;
@@ -66,12 +74,61 @@ function authenticate(token) {
   return { user: publicUser(user), claims };
 }
 function logout(token) { const claims = readToken(token); store.transaction((state) => state.revokedTokens.push({ jti: claims.jti, expiresAt: claims.exp })); }
-function startPasswordReset({ email }) {
-  const normalized = emailOf(email); const user = store.read().users.find((item) => item.email === normalized);
-  if (!user) return { sent: true };
-  const code = otp(); const expiresAt = Date.now() + 10 * 60 * 1000;
-  store.transaction((state) => { state.passwordResets = state.passwordResets.filter((item) => item.email !== normalized); state.passwordResets.push({ email: normalized, otpHash: hashValue(code), expiresAt, verified: false }); });
-  return { sent: true, ...(process.env.NODE_ENV !== 'production' ? { developmentOtp: code } : {}) };
+async function startPasswordReset({ email }) {
+    const normalized = emailOf(email);
+
+    const user = store
+        .read()
+        .users
+        .find((item) => item.email === normalized);
+
+    // Do not reveal whether an email exists.
+    if (!user) {
+        return { sent: true };
+    }
+
+    const code = otp();
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+
+    // Save the hashed OTP before sending the email.
+    store.transaction((state) => {
+        state.passwordResets = state.passwordResets.filter(
+            (item) => item.email !== normalized,
+        );
+
+        state.passwordResets.push({
+            email: normalized,
+            otpHash: hashValue(code),
+            expiresAt,
+            verified: false,
+        });
+    });
+
+    try {
+        await sendPasswordResetOtp({
+            to: normalized,
+            otp: code,
+        });
+    } catch (error) {
+        // Do not leave a usable reset code if email delivery failed.
+        store.transaction((state) => {
+            state.passwordResets = state.passwordResets.filter(
+                (item) => item.email !== normalized,
+            );
+        });
+
+        console.error('Password reset email failed:', error);
+
+        fail(
+            500,
+            'EMAIL_SEND_FAILED',
+            'We could not send the verification email. Please try again later.',
+        );
+    }
+
+    return {
+        sent: true,
+    };
 }
 function verifyOtp({ email, otp: code }) {
   const normalized = emailOf(email); const reset = store.read().passwordResets.find((item) => item.email === normalized);

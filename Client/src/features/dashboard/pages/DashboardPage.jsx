@@ -2,18 +2,144 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { api, queryString } from '../../../shared/api/client';
 import { EmptyState, ErrorState, LoadingState, StatusBadge } from '../../../shared/components/States';
-import { useAuth } from '../../auth/state/authContext';
 
 const metricCards = (kpis) => [
-  ['Products in stock', kpis.totalProductsInStock, 'Distinct products with availability'], ['Units on hand', kpis.totalUnitsOnHand, 'Across active locations'], ['Low / out of stock', `${kpis.lowStock} / ${kpis.outOfStock}`, 'Products requiring attention'], ['Pending receipts', kpis.pendingReceipts, 'Incoming goods not validated'], ['Pending deliveries', kpis.pendingDeliveries, 'Outbound goods in progress'], ['Scheduled transfers', kpis.scheduledTransfers, 'Internal moves in progress'],
+  ['Products in stock', kpis.totalProductsInStock, 'Distinct products with availability'],
+  ['Units on hand', kpis.totalUnitsOnHand, 'Across active locations'],
+  ['Low / out of stock', `${kpis.lowStock} / ${kpis.outOfStock}`, 'Products requiring attention'],
+  ['Pending receipts', kpis.pendingReceipts, 'Incoming goods not validated'],
+  ['Pending deliveries', kpis.pendingDeliveries, 'Outbound goods in progress'],
+  ['Scheduled transfers', kpis.scheduledTransfers, 'Internal moves in progress'],
 ];
+
 export default function DashboardPage() {
-  const { token } = useAuth(); const [data, setData] = useState(null); const [error, setError] = useState(''); const [filters, setFilters] = useState({ warehouseId: '', locationId: '', categoryId: '', documentType: '', status: '' });
-  const load = async () => { try { const nextData = await api(`/dashboard${queryString(filters)}`, { token }); setData(nextData); setError(''); } catch (err) { setError(err.message); } };
-  // The filter values intentionally define the refresh boundary.
-  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [token, filters.warehouseId, filters.locationId, filters.categoryId, filters.documentType, filters.status]);
-  if (!data && !error) return <LoadingState label="Preparing your inventory overview…" />; if (error) return <ErrorState message={error} retry={load} />;
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [filters, setFilters] = useState({
+    warehouseId: '', locationId: '', categoryId: '', documentType: '', status: '',
+  });
+
+  const load = async () => {
+    try {
+      const nextData = await api(`/dashboard${queryString(filters)}`);
+      setData(nextData);
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [
+    filters.warehouseId, filters.locationId, filters.categoryId, filters.documentType, filters.status,
+  ]);
+
+  if (!data && !error) return <LoadingState label="Preparing your inventory overview…" />;
+  if (error) return <ErrorState message={error} retry={load} />;
+
   const { kpis, filters: choices, lowStockAlerts, recentActivity } = data;
-  return <section className="page"><div className="page-heading"><div><p className="eyebrow">Inventory command center</p><h1>Dashboard</h1><p>Monitor stock health, pending documents and the latest movements.</p></div><Link className="button primary" to="/receipts">Record a receipt</Link></div><div className="filter-row"><select value={filters.warehouseId} onChange={(e) => setFilters({ ...filters, warehouseId: e.target.value, locationId: '' })}><option value="">All warehouses</option>{choices.warehouses.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select value={filters.locationId} onChange={(e) => setFilters({ ...filters, locationId: e.target.value })}><option value="">All locations</option>{choices.locations.filter((item) => !filters.warehouseId || item.warehouseId === filters.warehouseId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select value={filters.categoryId} onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}><option value="">All categories</option>{choices.categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select value={filters.documentType} onChange={(e) => setFilters({ ...filters, documentType: e.target.value })}><option value="">All document types</option>{['receipt', 'delivery', 'transfer', 'adjustment'].map((item) => <option key={item}>{item}</option>)}</select><select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}><option value="">All document statuses</option>{['draft', 'waiting', 'ready'].map((item) => <option key={item}>{item}</option>)}</select></div><div className="metric-grid">{metricCards(kpis).map(([label, value, hint]) => <article className="metric-card" key={label}><span>{label}</span><strong>{value}</strong><small>{hint}</small></article>)}</div><div className="content-grid"><article className="panel"><div className="panel-heading"><div><h2>Low-stock alerts</h2><p>Current availability at the selected scope.</p></div><Link to="/products">View products</Link></div>{lowStockAlerts.length ? <div className="alert-list">{lowStockAlerts.map((item) => <div className="alert-row" key={item.productId}><div><strong>{item.productName}</strong><span>{item.sku} · reorder at {item.reorderLevel}</span></div><div><b>{item.available}</b><StatusBadge value={item.severity} /></div></div>)}</div> : <EmptyState title="Stock levels look healthy" description="No products are at or below their reorder level." />}</article><article className="panel"><div className="panel-heading"><div><h2>Recent activity</h2><p>Latest movements in the stock ledger.</p></div><Link to="/ledger">Open ledger</Link></div>{recentActivity.length ? <div className="activity-list">{recentActivity.map((item) => <div className="activity-row" key={item.id}><span className={`movement ${item.quantityChange > 0 ? 'in' : 'out'}`}>{item.quantityChange > 0 ? '+' : ''}{item.quantityChange}</span><div><strong>{item.product?.name}</strong><span>{item.operationType} · {item.location?.name}</span></div><time>{new Date(item.createdAt).toLocaleString()}</time></div>)}</div> : <EmptyState title="No activity yet" description="Validated inventory movements will appear here." />}</article></div></section>;
+
+  return (
+    <section className="page">
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">Inventory command center</p>
+          <h1>Dashboard</h1>
+          <p>Monitor stock health, pending documents and the latest movements.</p>
+        </div>
+        <Link className="button primary" to="/receipts">Record a receipt</Link>
+      </div>
+
+      <div className="filter-row">
+        <select value={filters.warehouseId} onChange={(e) => setFilters({ ...filters, warehouseId: e.target.value, locationId: '' })}>
+          <option value="">All warehouses</option>
+          {choices.warehouses.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+        <select value={filters.locationId} onChange={(e) => setFilters({ ...filters, locationId: e.target.value })}>
+          <option value="">All locations</option>
+          {choices.locations.filter((item) => !filters.warehouseId || item.warehouseId === filters.warehouseId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+        <select value={filters.categoryId} onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}>
+          <option value="">All categories</option>
+          {choices.categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+        <select value={filters.documentType} onChange={(e) => setFilters({ ...filters, documentType: e.target.value })}>
+          <option value="">All document types</option>
+          {['receipt', 'delivery', 'transfer', 'adjustment'].map((item) => <option key={item}>{item}</option>)}
+        </select>
+        <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
+          <option value="">All document statuses</option>
+          {['draft', 'waiting', 'ready'].map((item) => <option key={item}>{item}</option>)}
+        </select>
+      </div>
+
+      <div className="metric-grid">
+        {metricCards(kpis).map(([label, value, hint]) => (
+          <article className="metric-card" key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+            <small>{hint}</small>
+          </article>
+        ))}
+      </div>
+
+      <div className="content-grid">
+        <article className="panel">
+          <div className="panel-heading">
+            <div>
+              <h2>Low-stock alerts</h2>
+              <p>Current availability at the selected scope.</p>
+            </div>
+            <Link to="/products">View products</Link>
+          </div>
+          {lowStockAlerts.length ? (
+            <div className="alert-list">
+              {lowStockAlerts.map((item) => (
+                <div className="alert-row" key={item.productId}>
+                  <div>
+                    <strong>{item.productName}</strong>
+                    <span>{item.sku} · reorder at {item.reorderLevel}</span>
+                  </div>
+                  <div>
+                    <b>{item.available}</b>
+                    <StatusBadge value={item.severity} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState title="Stock levels look healthy" description="No products are at or below their reorder level." />
+          )}
+        </article>
+
+        <article className="panel">
+          <div className="panel-heading">
+            <div>
+              <h2>Recent activity</h2>
+              <p>Latest movements in the stock ledger.</p>
+            </div>
+            <Link to="/ledger">Open ledger</Link>
+          </div>
+          {recentActivity.length ? (
+            <div className="activity-list">
+              {recentActivity.map((item) => (
+                <div className="activity-row" key={item.id}>
+                  <span className={`movement ${item.quantityChange > 0 ? 'in' : 'out'}`}>
+                    {item.quantityChange > 0 ? '+' : ''}{item.quantityChange}
+                  </span>
+                  <div>
+                    <strong>{item.product?.name}</strong>
+                    <span>{item.operationType} · {item.location?.name}</span>
+                  </div>
+                  <time>{new Date(item.createdAt).toLocaleString()}</time>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState title="No activity yet" description="Validated inventory movements will appear here." />
+          )}
+        </article>
+      </div>
+    </section>
+  );
 }
